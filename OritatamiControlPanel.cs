@@ -8,71 +8,88 @@ namespace WindowsFormsApp1
     public class OritatamiControlPanel
     {
         private readonly Panel panel;
-        private readonly List<Control> controls;
-        private readonly int detailSettingOpenSize;
-        private readonly int detailSettingCloseSize;
+        private readonly List<Control> controlsUnderPanel;
+        private readonly int openHeight;
+        private readonly int closeHeight;
         private readonly Form form;
-        private readonly int diffHeight;
         private bool IsClosed { get; set; }
 
-        private OritatamiControlPanel() {
-            throw new NotImplementedException();
-        }
-
         public OritatamiControlPanel(Panel panel) {
-            this.panel = panel;
-            this.controls = new List<Control>();
-            this.detailSettingOpenSize = this.panel.Size.Height;
-            this.detailSettingCloseSize = 0;
-            this.form = (Form)panel.Parent;
-            this.diffHeight = this.detailSettingOpenSize - this.detailSettingCloseSize;
+
+            this.panel              = panel;
+            this.controlsUnderPanel = new List<Control>();
+            this.openHeight         = this.panel.Size.Height;
+            this.closeHeight        = 0;
+            this.form               = (Form)panel.Parent;
+            IsClosed                = false;
             Action<Form> addControlsUnderPanel = (target) => {
                 List<Control> controls = GetAllControls<Control>(target);
                 foreach (Control control in controls) {
-                    if (control.Location.Y >= panel.Location.Y + detailSettingOpenSize) {
-                        Add(control);
+                    bool isControlUnderPanel = control.Location.Y >= panel.Location.Y + openHeight;
+                    if (isControlUnderPanel) {
+                        controlsUnderPanel.Add(control);
                     }
                 }
             };
             addControlsUnderPanel(this.form);
-            IsClosed = false;
+        }
+        private OritatamiControlPanel() {
+            throw new NotImplementedException();
         }
 
-        private void Add(Control control) {
-            controls.Add(control);
-        }
-
-        private bool OpenDetailSettingPanel() {
+        private bool OpenPanel() {
             if (!IsClosed) {
                 return false;
             }
-            this.panel.Size = new Size(this.panel.Size.Width, this.detailSettingOpenSize);
-            foreach (Control control in controls) {
-                control.Location = new Point(control.Location.X, control.Location.Y + this.diffHeight);
-            }
-            this.form.Size = new Size(form.Size.Width, this.form.Height + diffHeight);
+
+            Action resizePanelForOpen = () => {
+                this.panel.Size = new Size(this.panel.Size.Width, this.openHeight);
+            };
+            Action repositionControlsUnderPanelForOpen = () => {
+                foreach (Control control in controlsUnderPanel) {
+                    control.Location = new Point(control.Location.X, control.Location.Y + this.openHeight);
+                }
+            };
+            Action resizeFormForOpen = () => {
+                this.form.Size = new Size(form.Size.Width, this.form.Height + this.openHeight);
+            };
+
+            resizePanelForOpen();
+            repositionControlsUnderPanelForOpen();
+            resizeFormForOpen();
             IsClosed = false;
             return true;
         }
 
-        private bool CloseDetailSettingPanel() {
+        private bool ClosePanel() {
             if (IsClosed) {
                 return false;
             }
-            this.panel.Size = new Size(this.panel.Size.Width, this.detailSettingCloseSize);
-            foreach (Control control in controls) {
-                control.Location = new Point(control.Location.X, control.Location.Y - this.diffHeight);
-            }
-            this.form.Size = new Size(this.form.Size.Width, this.form.Size.Height - this.diffHeight);
+
+            Action resizePanleForClose = () => {
+                this.panel.Size = new Size(this.panel.Size.Width, this.closeHeight);
+            };
+            Action repositionControlsForClose = () => {
+                foreach (Control control in controlsUnderPanel) {
+                    control.Location = new Point(control.Location.X, control.Location.Y - this.openHeight);
+                }
+            };
+            Action resizeFormForClose = () => {
+                this.form.Size = new Size(this.form.Size.Width, this.form.Size.Height - this.openHeight);
+            };
+
+            resizePanleForClose();
+            repositionControlsForClose();
+            resizeFormForClose();
             IsClosed = true;
             return true;
         }
 
         public void ChangeOritatamiState() {
-            if (OpenDetailSettingPanel()) {
+            if (OpenPanel()) {
                 return;
             }
-            CloseDetailSettingPanel();
+            ClosePanel();
         }
 
         private List<T> GetAllControls<T>(Control top) where T : Control {
